@@ -1,0 +1,91 @@
+﻿<Window x:Class="Buffet.PowerDisplay"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:local="clr-namespace:Buffet"
+        xmlns:properties="clr-namespace:Buffet.Properties"
+        Topmost="True"
+        AllowsTransparency="True"
+        ShowInTaskbar="False"
+        WindowStyle="None"
+        IsHitTestVisible="{Binding EnableClickThrough, Converter={local:BooleanInverterConverter}}"
+        Top="{Binding PowerDisplayLocationY,Source={x:Static properties:Settings.Default},  Mode=TwoWay}"
+        Left="{Binding PowerDisplayLocationX,Source={x:Static properties:Settings.Default},  Mode=TwoWay}"
+        mc:Ignorable="d" Background="Transparent" SizeToContent="WidthAndHeight" >
+    <Grid>
+        <Grid.Visibility>
+            <MultiBinding>
+                <MultiBinding.Converter>
+                    <local:MultiValueChainConverter>
+                        <local:MultiValueChainConverter.InitialConverter>
+                            <local:BooleanOperationConverter Operation="Or" />
+                        </local:MultiValueChainConverter.InitialConverter>
+                        <local:BooleanToVisibilityConverter />
+                    </local:MultiValueChainConverter>
+                </MultiBinding.Converter>
+                <Binding Path="OverallMagicPower" Converter="{local:DoubleOperationConverter Operation=GreaterThan, Comparator=0}" />
+                <Binding Path="OverallPhysicalPower" Converter="{local:DoubleOperationConverter Operation=GreaterThan, Comparator=0}" />
+                <Binding Path="AlwaysDisplayBackground" />
+            </MultiBinding>
+        </Grid.Visibility>
+        <!--<Border IsHitTestVisible="False" Margin="25,25,17,17" Background="#55000000" />-->
+        <Border Background="#A111" Padding="2" MinWidth="20" Margin="20">
+            <Grid>
+                <Grid.Resources>
+                    <Style TargetType="ProgressBar">
+                        <Setter Property="Orientation" Value="Vertical" />
+                        <Setter Property="Maximum" Value="30" />
+                        <Setter Property="Minimum" Value="0" />
+                        <Setter Property="Height" Value="80" />
+                        <Setter Property="Width" Value="8" />
+                        <Setter Property="Margin" Value="0" />
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Background" Value="Transparent" />
+                    </Style>
+                </Grid.Resources>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ProgressBar Grid.Column="0" Grid.ColumnSpan="2" Width="16" Value="{Binding OverallPhysicalPower, Mode=OneWay}" Foreground="#FFA40000" Visibility="{Binding DisplayPhysical, Converter={local:BooleanToVisibilityConverter}}" />
+                <ProgressBar Grid.Column="1" Grid.ColumnSpan="2" Width="16" Value="{Binding OverallMagicPower, Mode=OneWay}" Foreground="#FF9B00A2" Visibility="{Binding DisplayMagic, Converter={local:BooleanToVisibilityConverter}}" />
+                <ProgressBar Grid.Column="0" Value="{Binding PhysicalPower}" Foreground="#FF500000">
+                    <ProgressBar.Visibility>
+                        <MultiBinding>
+                            <MultiBinding.Converter>
+                                <local:MultiValueChainConverter>
+                                    <local:MultiValueChainConverter.InitialConverter>
+                                        <local:BooleanOperationConverter Operation="And" />
+                                    </local:MultiValueChainConverter.InitialConverter>
+                                    <local:BooleanToVisibilityConverter />
+                                </local:MultiValueChainConverter>
+                            </MultiBinding.Converter>
+                            <Binding Path="DisplayPhysical" />
+                            <Binding Path="DisplaySimple" Converter="{local:BooleanInverterConverter}" />
+                        </MultiBinding>
+                    </ProgressBar.Visibility>
+                </ProgressBar>
+                <ProgressBar Grid.Column="1" Value="{Binding CriticalPower}" Foreground="#FF00328D" />
+                <ProgressBar Grid.Column="2" Value="{Binding MagicPower}" Foreground="#FF490045">
+                    <ProgressBar.Visibility>
+                        <MultiBinding>
+                            <MultiBinding.Converter>
+                                <local:MultiValueChainConverter>
+                                    <local:MultiValueChainConverter.InitialConverter>
+                                        <local:BooleanOperationConverter Operation="And" />
+                                    </local:MultiValueChainConverter.InitialConverter>
+                                    <local:BooleanToVisibilityConverter />
+                                </local:MultiValueChainConverter>
+                            </MultiBinding.Converter>
+                            <Binding Path="DisplayMagic" />
+                            <Binding Path="DisplaySimple" Converter="{local:BooleanInverterConverter}" />
+                        </MultiBinding>
+                    </ProgressBar.Visibility>
+                </ProgressBar>
+            </Grid>
+        </Border>
+        <local:OutlinedTextBlock Stroke="Black" StrokeThickness="1.2" Fill="White" FontSize="18" FontWeight="Bold" FontFamily="Segoe UI Black" Text="{Binding TimeRemaining, StringFormat={}{0:0}, FallbackValue=00}" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0" />
+    </Grid>
+</Window>
