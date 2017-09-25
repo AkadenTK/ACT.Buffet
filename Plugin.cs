@@ -25,10 +25,30 @@ namespace Buffet
 {
     public class Plugin : UserControl, IActPluginV1
     {
+        private StreamWriter logWriter;
         private PowerDisplay display;
         private BuffetVM VM;
         private System.Windows.Forms.Integration.ElementHost elementHost1;
         public List<string> AssemblyResolveDirectories { get; private set; } = new List<string>();
+        public Regex[] logRegex = new Regex[]
+        {
+            new Regex("Vulnerability Up"),
+            new Regex("Chain Strategem"),
+            new Regex("Brotherhood"),
+            new Regex("Dragon Sight"),
+            new Regex("Left Eye"),
+            new Regex("Contagion"),
+            new Regex("Foe('s)? Requiem"),
+            new Regex("Devotion"),
+            new Regex("Balance"),
+            new Regex("Spear"),
+            new Regex("Trick Attack"),
+            new Regex("Hypercharge"),
+            new Regex("Embolden"),
+            new Regex("Critical Up"),
+            new Regex("Battle Voice"),
+            new Regex("Battle Litany"),
+        };
 
         #region Designer Created Code (Avoid editing)
         /// <summary> 
@@ -90,6 +110,7 @@ namespace Buffet
 
         Label lblStatus;    // The status label that appears in ACT's Plugin tab
         string settingsFile = Path.Combine(ActGlobals.oFormActMain.AppDataFolder.FullName, "Config\\Buffet.config.yaml");
+        string logfile = Path.Combine(ActGlobals.oFormActMain.AppDataFolder.FullName, "buffet.log");
 
 
         #region IActPluginV1 Members
@@ -100,6 +121,8 @@ namespace Buffet
             lblStatus = pluginStatusText;   // Hand the status label's reference to our local var
             pluginScreenSpace.Controls.Add(this);   // Add this UserControl to the tab ACT provides
             this.Dock = DockStyle.Fill; // Expand the UserControl to fill the tab's client space
+
+            logWriter = new StreamWriter(logfile, true);
 
             LoadSettings();
             VM.InitializeWindowManager(new BuffetViewModelWindowManager());
@@ -112,7 +135,7 @@ namespace Buffet
                     display.Show();
                 }
             };
-
+            
             elementHost1.Child = new SettingsControl() { DataContext = VM };
 
             display = new PowerDisplay(VM.PowerDisplay);
@@ -132,6 +155,9 @@ namespace Buffet
             //ActGlobals.oFormActMain.AfterCombatAction -= oFormActMain_AfterCombatAction;
             ActGlobals.oFormActMain.OnLogLineRead -= oFormActMain_OnLogLineRead;
 
+            logWriter.Flush();
+            logWriter.Close();
+
             Properties.Settings.Default.Save();
             SaveSettings();
 
@@ -147,6 +173,12 @@ namespace Buffet
         private void oFormActMain_OnLogLineRead(bool isImport, LogLineEventArgs logInfo)
         {
             VM.HandleLog(logInfo.logLine, DateTime.Now);
+            foreach(var r in logRegex)
+                if (r.IsMatch(logInfo.logLine))
+                {
+                    logWriter.WriteLineAsync(logInfo.logLine);
+                    break;
+                }
         }
 
         void LoadSettings()
@@ -160,7 +192,11 @@ namespace Buffet
                 }
             }
             else
+            { 
                 VM = new BuffetVM();
+                foreach (var effect in Effects.AllEffects())
+                    VM.SoundSettings.Add(new SoundSettingsVM() { BuffName = effect.name, PlayBuffEndedSound = true, PlayBuffGrantedSound = true });
+            }
         }
         void SaveSettings()
         {

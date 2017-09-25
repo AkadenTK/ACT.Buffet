@@ -16,15 +16,18 @@ namespace Buffet
         public EffectChangeByTime physicalChangeByTime;
         public EffectChangeByTime magicChangeByTime;
         public EffectChangeByTime criticalChangeByTime;
+        public EffectPowerCheck[] powerCheckRegexes;
+        public bool announceWhenOverwritten = true;
         public string id;
         public string name;
         public int? duration;
         public bool stackable;
+        public bool targetMustBePC;
         public int physicalPower;
         public int magicPower;
         public int criticalPower;
     }
-    public class EffectExtender
+    public struct EffectExtender
     {
         public int extension;
         public Regex activationRegex;
@@ -33,6 +36,13 @@ namespace Buffet
     {
         public int interval;
         public int change;
+    }
+    public struct EffectPowerCheck
+    {
+        public Regex powerCheckRegex;
+        public int physicalPower;
+        public int magicPower;
+        public int criticalPower;
     }
 
     public class ActiveEffect
@@ -73,6 +83,7 @@ namespace Buffet
             id = "Hypercharge",
             name = "Hypercharge",
             stackable = false,
+            announceWhenOverwritten = false,
             duration = 10,
             physicalPower = 5,
             magicPower = 5,
@@ -108,6 +119,7 @@ namespace Buffet
             stackable = false,
             duration = 20,
             magicPower = 10,
+            targetMustBePC = true,
             magicChangeByTime = new EffectChangeByTime() { interval = 4, change = -2 },
             activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?<target>\\1)"),
             deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden")
@@ -120,6 +132,7 @@ namespace Buffet
             stackable = false,
             duration = 20,
             physicalPower = 10,
+            targetMustBePC = true,
             physicalChangeByTime = new EffectChangeByTime() { interval = 4, change = -2 },
             activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?!<target>\\1)"),
             deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden")
@@ -163,9 +176,11 @@ namespace Buffet
             id = "BRD Song",
             name = "Bard Song",
             stackable = false,
+            announceWhenOverwritten = false,
             criticalPower = 2,
-            activationRegex = new Regex(".*(?<target>You) gain the effect of.*Critical Up"),
-            deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Critical Up")
+            targetMustBePC = true,
+            activationRegex = new Regex(".*:(?<target>" + characterNameRegex + ") gains the effect of Critical Up from (?<source>" + characterNameRegex + ") for.*"),
+            deactivationRegex = new Regex(".*You lose the effect of.*Critical Up")
         };
 
         public static Effect Devotion = new Effect()
@@ -180,75 +195,143 @@ namespace Buffet
             deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Devotion")
         };
 
-        public static Effect HighBalance = new Effect()
+        public static Effect RadiantShield = new Effect()
         {
-            id = "AST Buff",
-            name = "Enhanced Balance",
+            id = "Radiant Shield",
+            name = "Radiant Shield",
             stackable = false,
-            physicalPower = 15,
-            magicPower = 15,
-            duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Balance:.*:(?<target>" + characterNameRegex + "):F0F:33D"),
-            deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
-            extensions = ASTEffectExtensions
+            announceWhenOverwritten = false,
+            duration = 4,
+            physicalPower = 2,
+            activationRegex = new Regex(":(?<target>.*) gains the effect of Physical Vulnerability Up from (?<source>"+characterNameRegex+")"),
+            deactivationRegex = new Regex(":(?<target>.*) loses the effect of Physical Vulnerability Up from (?<source>"+characterNameRegex+")")
         };
-        public static Effect HighSpear = new Effect()
+
+        public static Effect Contagion = new Effect()
         {
-            id = "AST Buff",
-            name = "Enhanced Spear",
+            id = "Contagion",
+            name = "Contagion",
             stackable = false,
-            criticalPower = 15,
-            duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):F0F:340"),
-            deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
-            extensions = ASTEffectExtensions
+            announceWhenOverwritten = false,
+            duration = 15,
+            magicPower = 10,
+            activationRegex = new Regex(":(?<target>.*) gains the effect of Magic Vulnerability Up from (?<source>Garuda-Egi)"),
+            deactivationRegex = new Regex(":(?<target>.*) loses the effect of Magic Vulnerability Up from (?<source>Garuda-Egi)")
         };
+
         public static Effect Balance = new Effect()
         {
             id = "AST Buff",
-            name = "Balance",
+            name = "The Balance",
             stackable = false,
-            physicalPower = 10,
-            magicPower = 10,
+            physicalPower = 5,
+            magicPower = 5,
+            targetMustBePC = true,
             duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*(?<card>The Balance):.*:(?<target>" + characterNameRegex + "):A0F:33D"),
+            activationRegex = new Regex(".*You gain the effect of.*The Balance"),
             deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
+            powerCheckRegexes = new EffectPowerCheck[]
+            {
+                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*(?<card>The Balance):.*:(?<target>" + characterNameRegex + "):F0F:33D"), physicalPower = 15, magicPower = 15},
+                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*(?<card>The Balance):.*:(?<target>" + characterNameRegex + "):A0F:33D"), physicalPower = 10, magicPower = 10},
+                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*(?<card>The Balance):.*:(?<target>" + characterNameRegex + "):50F:33D"), physicalPower = 5, magicPower = 5}
+            },
             extensions = ASTEffectExtensions
         };
         public static Effect Spear = new Effect()
         {
             id = "AST Buff",
-            name = "Spear",
-            stackable = false,
-            criticalPower = 10,
-            duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):A0F:340"),
-            deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
-            extensions = ASTEffectExtensions
-        };
-        public static Effect LowBalance = new Effect()
-        {
-            id = "AST Buff",
-            name = "Extended Balance",
-            stackable = false,
-            physicalPower = 5,
-            magicPower = 5,
-            duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Balance:.*:(?<target>" + characterNameRegex + "):50F:33D"),
-            deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
-            extensions = ASTEffectExtensions
-        };
-        public static Effect LowSpear = new Effect()
-        {
-            id = "AST Buff",
-            name = "Extended Spear",
+            name = "The Spear",
             stackable = false,
             criticalPower = 5,
+            targetMustBePC = true,
             duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):50F:340"),
+            activationRegex = new Regex(".*You gain the effect of.*The Spear"),
             deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
+            powerCheckRegexes = new EffectPowerCheck[]
+            {
+                 new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):F0F:340"), criticalPower = 15},
+                 new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):A0F:340"), criticalPower = 10},
+                 new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):50F:340"), criticalPower = 5},
+            },
             extensions = ASTEffectExtensions
         };
+
+        //public static Effect HighBalance = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Enhanced Balance",
+        //    stackable = false,
+        //    physicalPower = 15,
+        //    magicPower = 15,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Balance:.*:(?<target>" + characterNameRegex + "):F0F:33D"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
+        //    extensions = ASTEffectExtensions
+        //};
+        //public static Effect HighSpear = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Enhanced Spear",
+        //    stackable = false,
+        //    criticalPower = 15,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):F0F:340"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
+        //    extensions = ASTEffectExtensions
+        //};
+        //public static Effect Balance = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Balance",
+        //    stackable = false,
+        //    physicalPower = 10,
+        //    magicPower = 10,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*(?<card>The Balance):.*:(?<target>" + characterNameRegex + "):A0F:33D"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
+        //    extensions = ASTEffectExtensions
+        //};
+        //public static Effect Spear = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Spear",
+        //    stackable = false,
+        //    criticalPower = 10,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):A0F:340"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
+        //    extensions = ASTEffectExtensions
+        //};
+        //public static Effect LowBalance = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Extended Balance",
+        //    stackable = false,
+        //    physicalPower = 5,
+        //    magicPower = 5,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Balance) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Balance:.*:(?<target>" + characterNameRegex + "):50F:33D"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Spear)))|(lose the effect of .*The Balance)"),
+        //    extensions = ASTEffectExtensions
+        //};
+        //public static Effect LowSpear = new Effect()
+        //{
+        //    id = "AST Buff",
+        //    name = "Extended Spear",
+        //    stackable = false,
+        //    criticalPower = 5,
+        //    targetMustBePC = true,
+        //    duractionDetectorRegex = new Regex(":(?<target>" + characterNameRegex + ") gains the effect of (?<card>The Spear) from (?<source>" + characterNameRegex + ") for (?<duration>[0-9]+\\.[0-9]+) Seconds\\."),
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*The Spear:.*:(?<target>" + characterNameRegex + "):50F:340"),
+        //    deactivationRegex = new Regex(".*You (gain the effect of.*(The (Ewer|Arrow|Spire|Bole|Balance)))|(lose the effect of .*The Spear)"),
+        //    extensions = ASTEffectExtensions
+        //};
 
         public static IEnumerable<Effect> AllEffects()
         {
@@ -263,12 +346,14 @@ namespace Buffet
             yield return BattleVoice;
             yield return BRDSong;
             yield return Devotion;
-            yield return HighBalance;
+            yield return RadiantShield;
+            yield return Contagion;
+            //yield return HighBalance;
             yield return Balance;
-            yield return LowBalance;
-            yield return HighSpear;
+            //yield return LowBalance;
+            //yield return HighSpear;
             yield return Spear;
-            yield return LowSpear;
+            //yield return LowSpear;
         }
     }
 }

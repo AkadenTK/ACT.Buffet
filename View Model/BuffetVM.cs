@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Timers;
+using System.Windows.Forms;
 
 namespace Buffet
 {
@@ -36,7 +37,7 @@ namespace Buffet
 
             effects.CollectionChanged += effects_CollectionChanged;
 
-            Timer t = new Timer(200);
+            System.Timers.Timer t = new System.Timers.Timer(200);
             t.Start();
             t.Elapsed += CheckTimeRemaining;
         }
@@ -76,9 +77,9 @@ namespace Buffet
                 }
             }
 
-            // Effect Extensions
             foreach (var activeEffect in effects)
             {
+                // Effect Extensions
                 if (activeEffect.effect.extensions != null && activeEffect.effect.extensions.Any())
                 {
                     foreach (var extension in activeEffect.effect.extensions)
@@ -86,28 +87,106 @@ namespace Buffet
                         var extensionMatch = extension.activationRegex.Match(logLine);
                         if (extensionMatch.Success)
                         {
-                            var target = extensionMatch.Groups["target"].ToString();
-                            var targetMatches = string.IsNullOrEmpty(target) || target == activeEffect.target;
-                            var sourceMatches = extensionMatch.Groups["source"].ToString() == activeEffect.source;
-                            if (targetMatches && sourceMatches)
+                            //var target = extensionMatch.Groups["target"].ToString();
+                            //var targetMatches = string.IsNullOrEmpty(target) || target == activeEffect.target;
+                            //var sourceMatches = extensionMatch.Groups["source"].ToString() == activeEffect.source;
+                            //if (targetMatches && sourceMatches)
                                 activeEffect.duration += extension.extension;
+
+                            break;
                         }
                     }
                 }
+
+                // power checks
+                CheckPower(activeEffect, logLine);
+
+                // duration checks
+                CheckDuration(activeEffect, logLine);
             }
+        }
+
+        private bool CheckPower(ActiveEffect activeEffect, string logLine)
+        {
+            if (activeEffect.effect.powerCheckRegexes == null || !activeEffect.effect.powerCheckRegexes.Any()) return true;
+
+            foreach (var powerCheck in activeEffect.effect.powerCheckRegexes)
+            {
+                var powerCheckMatch = powerCheck.powerCheckRegex.Match(logLine);
+                if (powerCheckMatch.Success)
+                {
+                    if (IsKnownAlly(powerCheckMatch.Groups["target"].ToString())) continue;
+
+                    activeEffect.physicalPower = powerCheck.physicalPower;
+                    activeEffect.magicPower = powerCheck.magicPower;
+                    activeEffect.criticalPower = powerCheck.criticalPower;
+                    activeEffect.source = powerCheckMatch.Groups["source"].ToString();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool IsKnownAlly(string targetName)
+        {
+            var activeEncounter = ActGlobals.oFormActMain.ZoneList.LastOrDefault().ActiveEncounter;
+            if (activeEncounter == null) return false;
+
+            var allies = activeEncounter.GetAllies();
+
+            foreach (var ally in allies)
+                if (targetName == ally.Name) return true;
+
+            return false;
+        }
+
+        private bool CheckDuration(ActiveEffect activeEffect, string logline)
+        {
+            if (activeEffect.duration.HasValue || activeEffect.effect.duractionDetectorRegex == null) return true;
+            var loglineMatch = activeEffect.effect.duractionDetectorRegex.Match(logline);
+            if (loglineMatch.Success)
+            {
+                var target = loglineMatch.Groups["target"].ToString();
+                if (IsKnownAlly(target)) return false;
+
+                var targetMatches = string.IsNullOrEmpty(activeEffect.target) || target == activeEffect.target;
+                var sourceMatches = string.IsNullOrEmpty(activeEffect.source) || loglineMatch.Groups["source"].ToString() == activeEffect.source;
+                if (targetMatches && sourceMatches)
+                {
+                    double duration;
+                    if (double.TryParse(loglineMatch.Groups["duration"].ToString(), out duration))
+                    {
+                        activeEffect.duration = (int)Math.Round(duration);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         private void AddEffect(Effect effect, string source, string target, DateTime detectedTime)
         {
+            var isOverwritingEffect = false;
             foreach (var activeEffect in effects.ToArray())
             {
                 if (activeEffect.effect.id == effect.id && ((source == activeEffect.source && target == activeEffect.target) || !effect.stackable))
                 {
                     effects.Remove(activeEffect);
+                    isOverwritingEffect = true;
                 }
             }
-            effects.Add(new ActiveEffect() { activationTime = detectedTime, effect = effect, source = source, target = target, duration = effect.duration, physicalPower = effect.physicalPower, criticalPower = effect.criticalPower, magicPower = effect.magicPower });
-            Playsound(effect.name, true);
+            var newEffect = new ActiveEffect() { activationTime = detectedTime, effect = effect, source = source, target = target, duration = effect.duration, physicalPower = effect.physicalPower, criticalPower = effect.criticalPower, magicPower = effect.magicPower };
+
+            // Check backlog for any power references.
+            foreach (var backLogLine in backLog.Reverse())
+                if (CheckPower(newEffect, backLogLine)) break;
+
+            // check backlog for any duration references
+            foreach (var backLogLine in backLog.Reverse())
+                if (CheckDuration(newEffect, backLogLine)) break;
+
+            effects.Add(newEffect);
+            if(effect.announceWhenOverwritten || !isOverwritingEffect) Playsound(effect.name, true);
         }
 
         private (string path, int volume, bool playSound) GetSoundSettingsFor(string buffName, bool granted = true)
@@ -122,8 +201,11 @@ namespace Buffet
 
                 foreach (var settings in (from ss in SoundSettings where ss.BuffName == buffName select ss).Reverse())
                 {
-                    if (!string.IsNullOrEmpty(settings.BuffGrantedPath)) path = settings.BuffGrantedPath;
-                    volume = settings.BuffGrantedVolume;
+                    if (!string.IsNullOrEmpty(settings.BuffGrantedPath))
+                    {
+                        path = settings.BuffGrantedPath;
+                        volume = settings.BuffGrantedVolume;
+                    }
                     playSound = settings.PlayBuffGrantedSound;
                 }
             }
@@ -134,8 +216,11 @@ namespace Buffet
 
                 foreach (var settings in (from ss in SoundSettings where ss.BuffName == buffName select ss).Reverse())
                 {
-                    if (!string.IsNullOrEmpty(settings.BuffEndedPath)) path = settings.BuffEndedPath;
-                    volume = settings.BuffEndedVolume;
+                    if (!string.IsNullOrEmpty(settings.BuffEndedPath))
+                    {
+                        path = settings.BuffEndedPath;
+                        volume = settings.BuffEndedVolume;
+                    }
                     playSound = settings.PlayBuffEndedSound;
                 }
             }
@@ -187,27 +272,6 @@ namespace Buffet
 
         private void CheckTimeRemaining(object sender, ElapsedEventArgs e)
         {
-            foreach (var activeEffect in effects)
-            {
-                if (!activeEffect.duration.HasValue && activeEffect.effect.duractionDetectorRegex != null)
-                {
-                    foreach (var backlogLine in backLog)
-                    {
-                        var backlogMatch = activeEffect.effect.duractionDetectorRegex.Match(backlogLine);
-                        if (backlogMatch.Success)
-                        {
-                            var targetMatches = backlogMatch.Groups["target"].ToString() == activeEffect.target;
-                            var sourceMatches = backlogMatch.Groups["source"].ToString() == activeEffect.source;
-                            if (targetMatches && sourceMatches)
-                            {
-                                double duration;
-                                if (double.TryParse(backlogMatch.Groups["duration"].ToString(), out duration))
-                                    activeEffect.duration = (int)Math.Round(duration);
-                            }
-                        }
-                    }
-                }
-            }
 
             var timeRemaining = 0.0;
             var physicalPower = 0;

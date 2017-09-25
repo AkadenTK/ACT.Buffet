@@ -90,6 +90,7 @@
                     </StackPanel>
                     <CheckBox IsChecked="{Binding PowerDisplay.AlwaysDisplayBackground}">Show background even when no bars are present</CheckBox>
                     <CheckBox IsChecked="{Binding PowerDisplay.EnableClickThrough}">Enable clickthrough</CheckBox>
+                    <CheckBox IsChecked="{Binding PowerDisplay.HideNumbersWhenZero}">Hide countdown and power value when they are 0.</CheckBox>
                 </StackPanel>
             </ScrollViewer>
         </TabItem>

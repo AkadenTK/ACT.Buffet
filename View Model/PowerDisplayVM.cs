@@ -76,6 +76,13 @@ namespace Buffet
             set { SetProperty(ref _AlwaysDisplayBackground, value); }
         }
 
+        private bool _HideNumbersWhenZero;
+        public bool HideNumbersWhenZero
+        {
+            get { return _HideNumbersWhenZero; }
+            set { SetProperty(ref _HideNumbersWhenZero, value); }
+        }
+
         private bool _EnableClickThrough;
         public bool EnableClickThrough
         {
