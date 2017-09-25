@@ -171,6 +171,7 @@ namespace Buffet
             {
                 if (activeEffect.effect.id == effect.id && ((source == activeEffect.source && target == activeEffect.target) || !effect.stackable))
                 {
+                    if ((DateTime.Now - activeEffect.activationTime).TotalSeconds < 0.2) return; // Prevent rapid repeated lines of buff activation.
                     effects.Remove(activeEffect);
                     isOverwritingEffect = true;
                 }
@@ -186,7 +187,7 @@ namespace Buffet
                 if (CheckDuration(newEffect, backLogLine)) break;
 
             effects.Add(newEffect);
-            if(effect.announceWhenOverwritten || !isOverwritingEffect) Playsound(effect.name, true);
+            if(!effect.preventSoundWhenOverwriting || !isOverwritingEffect) Playsound(effect.name, true);
         }
 
         private (string path, int volume, bool playSound) GetSoundSettingsFor(string buffName, bool granted = true)
@@ -283,11 +284,11 @@ namespace Buffet
 
                 // Update powers.
                 if (effect.effect.physicalChangeByTime != null)
-                    effect.physicalPower = effect.effect.physicalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.physicalChangeByTime.interval) * effect.effect.physicalChangeByTime.change);
+                    effect.physicalPower = Math.Max(effect.effect.physicalChangeByTime.minimum, Math.Min(effect.effect.physicalChangeByTime.maximum, effect.effect.physicalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.physicalChangeByTime.interval) * effect.effect.physicalChangeByTime.change)));
                 if (effect.effect.magicChangeByTime != null)
-                    effect.magicPower = effect.effect.magicPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.magicChangeByTime.interval) * effect.effect.magicChangeByTime.change);
+                    effect.magicPower = Math.Max(effect.effect.magicChangeByTime.minimum, Math.Min(effect.effect.magicChangeByTime.maximum, effect.effect.magicPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.magicChangeByTime.interval) * effect.effect.magicChangeByTime.change)));
                 if (effect.effect.criticalChangeByTime != null)
-                    effect.criticalPower = effect.effect.criticalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.criticalChangeByTime.interval) * effect.effect.criticalChangeByTime.change);
+                    effect.criticalPower = Math.Max(effect.effect.criticalChangeByTime.minimum, Math.Min(effect.effect.criticalChangeByTime.maximum, effect.effect.criticalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.criticalChangeByTime.interval) * effect.effect.criticalChangeByTime.change)));
 
                 physicalPower += effect.physicalPower;
                 magicPower += effect.magicPower;

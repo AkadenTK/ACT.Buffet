@@ -17,7 +17,7 @@ namespace Buffet
         public EffectChangeByTime magicChangeByTime;
         public EffectChangeByTime criticalChangeByTime;
         public EffectPowerCheck[] powerCheckRegexes;
-        public bool announceWhenOverwritten = true;
+        public bool preventSoundWhenOverwriting;
         public string id;
         public string name;
         public int? duration;
@@ -36,6 +36,8 @@ namespace Buffet
     {
         public int interval;
         public int change;
+        public int minimum = int.MinValue;
+        public int maximum = int.MaxValue;
     }
     public struct EffectPowerCheck
     {
@@ -83,7 +85,7 @@ namespace Buffet
             id = "Hypercharge",
             name = "Hypercharge",
             stackable = false,
-            announceWhenOverwritten = false,
+            preventSoundWhenOverwriting = true,
             duration = 10,
             physicalPower = 5,
             magicPower = 5,
@@ -112,30 +114,35 @@ namespace Buffet
             deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Left Eye")
         };
 
-        public static Effect SelfEmbolden = new Effect()
-        {
-            id = "Embolden",
-            name = "Self Embolden",
-            stackable = false,
-            duration = 20,
-            magicPower = 10,
-            targetMustBePC = true,
-            magicChangeByTime = new EffectChangeByTime() { interval = 4, change = -2 },
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?<target>\\1)"),
-            deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden")
-        };
+        //public static Effect SelfEmbolden = new Effect()
+        //{
+        //    id = "Embolden",
+        //    name = "Self Embolden",
+        //    stackable = false,
+        //    duration = 20,
+        //    magicPower = 10,
+        //    targetMustBePC = true,
+        //    magicChangeByTime = new EffectChangeByTime() { interval = 4, change = -2 },
+        //    activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?<target>\\1)"),
+        //    deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden")
+        //};
 
         public static Effect Embolden = new Effect()
         {
             id = "Embolden",
-            name = "Ally Embolden",
+            name = "Embolden",
             stackable = false,
             duration = 20,
-            physicalPower = 10,
             targetMustBePC = true,
-            physicalChangeByTime = new EffectChangeByTime() { interval = 4, change = -2 },
-            activationRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?!<target>\\1)"),
-            deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden")
+            physicalChangeByTime = new EffectChangeByTime() { interval = 4, change = -2, minimum = 0 },
+            magicChangeByTime = new EffectChangeByTime() { interval = 4, change = -2, minimum = 0 },
+            activationRegex = new Regex(".*(?<target>You) gain the effect of.*Embolden"),
+            deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden"),
+            powerCheckRegexes = new EffectPowerCheck[]
+            {
+                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?<target>\\1)"), magicPower = 10},
+                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?!<target>\\1)"), physicalPower = 10,}
+            },
         };
 
         public static Effect Brotherhood = new Effect()
@@ -176,7 +183,7 @@ namespace Buffet
             id = "BRD Song",
             name = "Bard Song",
             stackable = false,
-            announceWhenOverwritten = false,
+            preventSoundWhenOverwriting = true,
             criticalPower = 2,
             targetMustBePC = true,
             activationRegex = new Regex(".*:(?<target>" + characterNameRegex + ") gains the effect of Critical Up from (?<source>" + characterNameRegex + ") for.*"),
@@ -200,7 +207,7 @@ namespace Buffet
             id = "Radiant Shield",
             name = "Radiant Shield",
             stackable = false,
-            announceWhenOverwritten = false,
+            preventSoundWhenOverwriting = true,
             duration = 4,
             physicalPower = 2,
             activationRegex = new Regex(":(?<target>.*) gains the effect of Physical Vulnerability Up from (?<source>"+characterNameRegex+")"),
@@ -212,7 +219,7 @@ namespace Buffet
             id = "Contagion",
             name = "Contagion",
             stackable = false,
-            announceWhenOverwritten = false,
+            preventSoundWhenOverwriting = true,
             duration = 15,
             magicPower = 10,
             activationRegex = new Regex(":(?<target>.*) gains the effect of Magic Vulnerability Up from (?<source>Garuda-Egi)"),
@@ -339,7 +346,7 @@ namespace Buffet
             yield return TrickAttack;
             yield return BattleLitany;
             yield return DragonSight;
-            yield return SelfEmbolden;
+            //yield return SelfEmbolden;
             yield return Embolden;
             yield return Brotherhood;
             yield return ChainStrategem;
