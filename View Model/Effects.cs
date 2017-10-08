@@ -26,6 +26,7 @@ namespace Buffet
         public int physicalPower;
         public int magicPower;
         public int criticalPower;
+        public bool hideTimer;
     }
     public struct EffectExtender
     {
@@ -45,6 +46,9 @@ namespace Buffet
         public int physicalPower;
         public int magicPower;
         public int criticalPower;
+        public EffectChangeByTime physicalChangeByTime;
+        public EffectChangeByTime magicChangeByTime;
+        public EffectChangeByTime criticalChangeByTime;
     }
 
     public class ActiveEffect
@@ -56,6 +60,12 @@ namespace Buffet
         public int physicalPower;
         public int magicPower;
         public int criticalPower;
+        public int initialPhysicalPower;
+        public int initialMagicPower;
+        public int initialCriticalPower;
+        public EffectChangeByTime physicalChangeByTime;
+        public EffectChangeByTime magicChangeByTime;
+        public EffectChangeByTime criticalChangeByTime;
         public DateTime activationTime;
     }
 
@@ -68,16 +78,35 @@ namespace Buffet
             new EffectExtender() {extension = 15, activationRegex = new Regex(":(?<source>"+characterNameRegex+"):.*:Time Dilation:.*:(?<target>"+characterNameRegex+")")},
         };
 
+        public static Effect InfusionOfPhysical = new Effect()
+        {
+            id = "Infusion",
+            name = "Infusion",
+            stackable = false,
+            duration = 30,
+            physicalPower = 5,
+            activationRegex = new Regex("(?<source>You) use an.*infusion of (strength|dexterity)")
+        };
+
+        public static Effect InfusionOfMagic = new Effect()
+        {
+            id = "Infusion",
+            name = "Infusion",
+            stackable = false,
+            duration = 30,
+            magicPower = 5,
+            activationRegex = new Regex("(?<source>You) use an.*infusion of (intelligence|mind)")
+        };
+
         public static Effect TrickAttack = new Effect()
         {
             id = "Trick Attack",
             name = "Trick Attack",
             stackable = false,
             duration = 10,
-            physicalPower = 10,
             magicPower = 10,
-            activationRegex = new Regex(" ..:(?<target>" + characterNameRegex + ") gains the effect of Vulnerability Up from (?<source>" + characterNameRegex + ") for 10.00 Seconds.*"),
-            deactivationRegex = new Regex(" ..:(?<target>" + characterNameRegex + ") loses.*Vulnerability Up.*from (?<source>" + characterNameRegex + ").")
+            physicalPower = 10,
+            activationRegex = new Regex(":(?<target>.+) gains the effect of Vulnerability Up from (?<source>(?!Rook|Bishop Autoturret).*) for 10.00 Seconds\\.")
         };
 
         public static Effect Hypercharge = new Effect()
@@ -132,16 +161,16 @@ namespace Buffet
             id = "Embolden",
             name = "Embolden",
             stackable = false,
+            physicalPower = 10,
             duration = 20,
             targetMustBePC = true,
             physicalChangeByTime = new EffectChangeByTime() { interval = 4, change = -2, minimum = 0 },
-            magicChangeByTime = new EffectChangeByTime() { interval = 4, change = -2, minimum = 0 },
             activationRegex = new Regex(".*(?<target>You) gain the effect of.*Embolden"),
             deactivationRegex = new Regex(".*(?<target>You) lose the effect of.*Embolden"),
             powerCheckRegexes = new EffectPowerCheck[]
             {
-                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?<target>\\1)"), magicPower = 10},
-                new EffectPowerCheck() {powerCheckRegex = new Regex(":(?<source>" + characterNameRegex + "):.*:Embolden:.*:(?!<target>\\1)"), physicalPower = 10,}
+                new EffectPowerCheck() {powerCheckRegex = new Regex("(?<source>You).*use.*Embolden"), physicalPower = 0, magicPower= 10, physicalChangeByTime = null,
+                    magicChangeByTime = new EffectChangeByTime() { interval= 4, change= -2, minimum = 0 } }
             },
         };
 
@@ -185,6 +214,8 @@ namespace Buffet
             stackable = false,
             preventSoundWhenOverwriting = true,
             criticalPower = 2,
+            duration = 30,
+            hideTimer = true,
             targetMustBePC = true,
             activationRegex = new Regex(".*:(?<target>" + characterNameRegex + ") gains the effect of Critical Up from (?<source>" + characterNameRegex + ") for.*"),
             deactivationRegex = new Regex(".*You lose the effect of.*Critical Up")
@@ -208,10 +239,10 @@ namespace Buffet
             name = "Radiant Shield",
             stackable = false,
             preventSoundWhenOverwriting = true,
-            duration = 4,
+            duration = 8,
             physicalPower = 2,
-            activationRegex = new Regex(":(?<target>.*) gains the effect of Physical Vulnerability Up from (?<source>"+characterNameRegex+")"),
-            deactivationRegex = new Regex(":(?<target>.*) loses the effect of Physical Vulnerability Up from (?<source>"+characterNameRegex+")")
+            activationRegex = new Regex(":(?<target>.*) gains the effect of Physical Vulnerability Up from (?<source>" + characterNameRegex + ")"),
+            deactivationRegex = new Regex(":(?<target>.*) loses the effect of Physical Vulnerability Up from (?<source>" + characterNameRegex + ")")
         };
 
         public static Effect Contagion = new Effect()
@@ -361,6 +392,8 @@ namespace Buffet
             //yield return HighSpear;
             yield return Spear;
             //yield return LowSpear;
+            yield return InfusionOfPhysical;
+            yield return InfusionOfMagic;
         }
     }
 }

@@ -91,7 +91,7 @@ namespace Buffet
                             //var targetMatches = string.IsNullOrEmpty(target) || target == activeEffect.target;
                             //var sourceMatches = extensionMatch.Groups["source"].ToString() == activeEffect.source;
                             //if (targetMatches && sourceMatches)
-                                activeEffect.duration += extension.extension;
+                            activeEffect.duration += extension.extension;
 
                             break;
                         }
@@ -120,6 +120,12 @@ namespace Buffet
                     activeEffect.physicalPower = powerCheck.physicalPower;
                     activeEffect.magicPower = powerCheck.magicPower;
                     activeEffect.criticalPower = powerCheck.criticalPower;
+                    activeEffect.initialPhysicalPower = powerCheck.physicalPower;
+                    activeEffect.initialCriticalPower = powerCheck.criticalPower;
+                    activeEffect.initialMagicPower = powerCheck.magicPower;
+                    activeEffect.physicalChangeByTime = powerCheck.physicalChangeByTime;
+                    activeEffect.magicChangeByTime = powerCheck.magicChangeByTime;
+                    activeEffect.criticalChangeByTime = powerCheck.criticalChangeByTime;
                     activeEffect.source = powerCheckMatch.Groups["source"].ToString();
                     return true;
                 }
@@ -176,18 +182,35 @@ namespace Buffet
                     isOverwritingEffect = true;
                 }
             }
-            var newEffect = new ActiveEffect() { activationTime = detectedTime, effect = effect, source = source, target = target, duration = effect.duration, physicalPower = effect.physicalPower, criticalPower = effect.criticalPower, magicPower = effect.magicPower };
+            var newEffect = new ActiveEffect()
+            {
+                activationTime = detectedTime,
+                effect = effect,
+                source = source,
+                target = target,
+                duration = effect.duration,
+                physicalPower = effect.physicalPower,
+                criticalPower = effect.criticalPower,
+                magicPower = effect.magicPower,
+                initialPhysicalPower = effect.physicalPower,
+                initialCriticalPower = effect.criticalPower,
+                initialMagicPower = effect.magicPower,
+                physicalChangeByTime = effect.physicalChangeByTime,
+                magicChangeByTime = effect.magicChangeByTime,
+                criticalChangeByTime = effect.criticalChangeByTime
+            };
 
+            var reverseBacklog = backLog.Reverse().ToArray();
             // Check backlog for any power references.
-            foreach (var backLogLine in backLog.Reverse())
+            foreach (var backLogLine in reverseBacklog)
                 if (CheckPower(newEffect, backLogLine)) break;
 
             // check backlog for any duration references
-            foreach (var backLogLine in backLog.Reverse())
+            foreach (var backLogLine in reverseBacklog)
                 if (CheckDuration(newEffect, backLogLine)) break;
 
             effects.Add(newEffect);
-            if(!effect.preventSoundWhenOverwriting || !isOverwritingEffect) Playsound(effect.name, true);
+            if (!effect.preventSoundWhenOverwriting || !isOverwritingEffect) Playsound(effect.name, true);
         }
 
         private (string path, int volume, bool playSound) GetSoundSettingsFor(string buffName, bool granted = true)
@@ -283,12 +306,12 @@ namespace Buffet
                 var effectTimeRemaining = (effect.duration ?? 0) - (DateTime.Now - effect.activationTime).TotalSeconds;
 
                 // Update powers.
-                if (effect.effect.physicalChangeByTime != null)
-                    effect.physicalPower = Math.Max(effect.effect.physicalChangeByTime.minimum, Math.Min(effect.effect.physicalChangeByTime.maximum, effect.effect.physicalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.physicalChangeByTime.interval) * effect.effect.physicalChangeByTime.change)));
-                if (effect.effect.magicChangeByTime != null)
-                    effect.magicPower = Math.Max(effect.effect.magicChangeByTime.minimum, Math.Min(effect.effect.magicChangeByTime.maximum, effect.effect.magicPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.magicChangeByTime.interval) * effect.effect.magicChangeByTime.change)));
-                if (effect.effect.criticalChangeByTime != null)
-                    effect.criticalPower = Math.Max(effect.effect.criticalChangeByTime.minimum, Math.Min(effect.effect.criticalChangeByTime.maximum, effect.effect.criticalPower + (int)(Math.Floor((effect.effect.duration.Value - effectTimeRemaining) / effect.effect.criticalChangeByTime.interval) * effect.effect.criticalChangeByTime.change)));
+                if (effect.physicalChangeByTime != null)
+                    effect.physicalPower = Math.Max(effect.physicalChangeByTime.minimum, Math.Min(effect.physicalChangeByTime.maximum, effect.initialPhysicalPower + (int)(Math.Floor((effect.duration.Value - effectTimeRemaining) / effect.physicalChangeByTime.interval) * effect.physicalChangeByTime.change)));
+                if (effect.magicChangeByTime != null)
+                    effect.magicPower = Math.Max(effect.magicChangeByTime.minimum, Math.Min(effect.magicChangeByTime.maximum, effect.initialMagicPower + (int)(Math.Floor((effect.duration.Value - effectTimeRemaining) / effect.magicChangeByTime.interval) * effect.magicChangeByTime.change)));
+                if (effect.criticalChangeByTime != null)
+                    effect.criticalPower = Math.Max(effect.criticalChangeByTime.minimum, Math.Min(effect.criticalChangeByTime.maximum, effect.initialCriticalPower + (int)(Math.Floor((effect.duration.Value - effectTimeRemaining) / effect.criticalChangeByTime.interval) * effect.criticalChangeByTime.change)));
 
                 physicalPower += effect.physicalPower;
                 magicPower += effect.magicPower;
@@ -300,7 +323,7 @@ namespace Buffet
                     Playsound(effect.effect.name, false);
                     continue;
                 }
-                timeRemaining = Math.Max(timeRemaining, (effect.duration.HasValue) ? effectTimeRemaining : 0);
+                if(!effect.effect.hideTimer) timeRemaining = Math.Max(timeRemaining, (effect.duration.HasValue) ? effectTimeRemaining : 0);
             }
 
             PowerDisplay.PhysicalPower = physicalPower;
